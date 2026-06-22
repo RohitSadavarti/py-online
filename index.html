@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python Data Visualization Mastery Platform</title>
+
+  <!-- ============================================================
+       EXTERNAL CDN DEPENDENCIES
+       To upgrade a library, update the version in the URL below.
+       Always test after upgrading — breaking changes are common.
+       ============================================================ -->
+
+  <!-- Monaco Editor (code editor) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.js"></script>
+
+  <!-- Plotly.js (renders interactive Plotly charts client-side) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+
+  <!-- Pyodide (runs Python in the browser via WebAssembly)
+       NOTE: Must match the indexURL version inside js/runtime.js -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+
+  <!-- ============================================================
+       LOCAL STYLESHEET
+       All visual styles are in css/styles.css.
+       ============================================================ -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ======= HEADER ======= -->
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">PyViz Mastery</span>
+      <span class="brand-sub">Python Data Visualization Practice</span>
+    </div>
+    <div class="header-progress">
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <span id="progress-label" class="kbd-hint">0 / 0 solved (0%)</span>
+      <span id="accuracy-label" class="kbd-hint">Accuracy: 0%</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="random-btn"       title="Random Challenge">🎲 <span class="label">Random</span></button>
+      <button class="icon-btn" id="browse-btn"       title="Browse Questions">📚 <span class="label">Browse</span></button>
+      <button class="icon-btn" id="achievements-btn" title="Achievements">🏆 <span class="label">Achievements</span></button>
+      <button class="icon-btn" id="theme-toggle"     title="Toggle theme">☀️ Light</button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+
+    <!-- ======= LEFT PANEL — Question details ======= -->
+    <section class="panel" id="left-panel">
+      <div class="panel-scroll">
+
+        <div class="q-meta-row">
+          <span id="q-section" class="q-section-label"></span>
+        </div>
+        <div class="q-meta-row">
+          <span id="q-number"     class="q-id-chip"></span>
+          <span id="q-difficulty" class="badge"></span>
+          <span id="q-library"    class="badge"></span>
+          <span id="solved-badge" class="solved-chip" style="display:none;">✓ Solved</span>
+          <span id="q-position"   class="kbd-hint" style="margin-left:auto;"></span>
+        </div>
+
+        <h2 id="q-title"></h2>
+        <p  id="q-desc"></p>
+
+        <div class="field-label">Learning Objective</div>
+        <div class="field-value" id="q-objective"></div>
+
+        <div class="field-label">Expected Chart Type</div>
+        <div class="field-value" id="q-expected-type"></div>
+
+        <div class="field-label">Dataset</div>
+        <table id="dataset-table"></table>
+        <div   id="dataset-note"></div>
+
+        <div class="field-label">Hints</div>
+        <ul id="hints-list"></ul>
+
+        <div class="field-label">Your Notes</div>
+        <textarea id="notes-area" placeholder="Jot down notes for this question…"></textarea>
+
+      </div><!-- /panel-scroll -->
+
+      <!-- Sticky footer — always visible at the bottom of the left panel -->
+      <div class="panel-footer">
+        <div class="left-actions">
+          <button class="btn" id="bookmark-btn">☆ Bookmark</button>
+          <button class="btn" id="export-code-btn">⬇ Export Code</button>
+        </div>
+        <div class="next-btn-row">
+          <button class="btn btn-primary" id="next-btn" disabled>Next Question →</button>
+        </div>
+      </div>
+
+    </section><!-- /left-panel -->
+
+    <!-- ======= CENTER PANEL — Code editor ======= -->
+    <section class="panel" id="center-panel">
+
+      <div class="editor-toolbar">
+        <button class="btn btn-primary" id="run-btn">▶ Run Code</button>
+        <button class="btn"             id="reset-btn">↺ Reset</button>
+        <button class="btn"             id="solution-btn">💡 Show Solution</button>
+        <button class="btn"             id="fullscreen-btn">⛶ Fullscreen</button>
+        <span class="toolbar-spacer"></span>
+        <span class="kbd-hint">Ctrl+Enter to run</span>
+      </div>
+
+      <div id="editor-wrap">
+        <div id="editor"></div>
+        <div id="editor-loading">Loading editor…</div>
+      </div>
+
+      <div id="runner-status" class="runner-status status-idle">Booting…</div>
+
+    </section><!-- /center-panel -->
+
+    <!-- ======= RIGHT PANEL — Chart output ======= -->
+    <section class="panel" id="right-panel">
+
+      <div class="output-header">
+        <span class="output-title">Output</span>
+        <span id="output-status" class="status-pill status-idle">Idle</span>
+      </div>
+
+      <div class="chart-area" id="chart-area">
+        <div class="output-placeholder">Run your code to see the chart here.</div>
+      </div>
+
+      <div class="result-banner" id="result-banner"></div>
+      <div class="checklist"     id="checklist"></div>
+
+      <div class="console-wrap">
+        <div class="console-label">Console</div>
+        <div id="console-area"></div>
+      </div>
+
+    </section><!-- /right-panel -->
+
+  </div><!-- /main-layout -->
+</div><!-- /app-shell -->
+
+<!-- ======= BROWSE QUESTIONS OVERLAY ======= -->
+<div class="overlay" id="browse-overlay">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <strong>Browse Questions</strong>
+      <button class="overlay-close" id="browse-close">✕</button>
+    </div>
+    <div class="overlay-controls">
+      <input type="text" id="search-input" placeholder="Search questions…" />
+      <select id="filter-library">
+        <option value="all">All Libraries</option>
+        <option value="matplotlib">Matplotlib</option>
+        <option value="seaborn">Seaborn</option>
+        <option value="plotly">Plotly</option>
+      </select>
+      <select id="filter-difficulty">
+        <option value="all">All Difficulties</option>
+        <option value="Beginner">Beginner</option>
+        <option value="Intermediate">Intermediate</option>
+        <option value="Advanced">Advanced</option>
+      </select>
+      <label class="checkbox-label">
+        <input type="checkbox" id="filter-bookmarked" /> Bookmarked only
+      </label>
+    </div>
+    <div class="overlay-body" id="question-list"></div>
+  </div>
+</div>
+
+<!-- ======= ACHIEVEMENTS OVERLAY ======= -->
+<div class="overlay" id="achievements-overlay">
+  <div class="overlay-panel">
+    <div class="overlay-header">
+      <strong>Achievements</strong>
+      <button class="overlay-close" id="achievements-close">✕</button>
+    </div>
+    <div class="overlay-body" id="achievements-list"></div>
+  </div>
+</div>
+
+<!-- Achievement toast notifications -->
+<div id="toast-container"></div>
+
+
+<!-- ============================================================
+     LOCAL JAVASCRIPT — load order matters!
+     questions.js  → data only (no deps)
+     config.js     → constants + state (needs QUESTIONS)
+     storage.js    → persistence (needs STORAGE_KEY)
+     theme.js      → theme toggle (needs progress, monacoEditor)
+     runtime.js    → Pyodide + chart extraction (needs config)
+     editor.js     → Monaco setup (needs config, runner)
+     runner.js     → runCode + validate (needs runtime, output, navigation, progress)
+     navigation.js → question nav + left panel (needs output, browse)
+     output.js     → right panel render (needs escapeHtml from main.js… loaded last)
+     browse.js     → overlay UI (needs navigation, progress)
+     progress.js   → attempts + achievements (needs browse, escapeHtml)
+     main.js       → bootstrap + wiring (must be last; defines escapeHtml)
+     ============================================================ -->
+<script src="js/questions.js"></script>
+<script src="js/config.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/theme.js"></script>
+<script src="js/runtime.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/runner.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/output.js"></script>
+<script src="js/browse.js"></script>
+<script src="js/progress.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>
